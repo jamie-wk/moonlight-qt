@@ -705,4 +705,7 @@ PE_VERSION = $$(MOONLIGHT_PE_VERSION)
 }
 DEFINES += VERSION_STR=\\\"$$MOONLIGHT_VERSION\\\"
 
+# Never query upstream's update manifest from this fork (see autoupdatechecker.cpp)
+DEFINES += DISABLE_UPDATE_CHECK
+
 SOURCES += $$PWD/streaming/video/ffmpeg-renderers/pacer/vrr/profile.cpp
