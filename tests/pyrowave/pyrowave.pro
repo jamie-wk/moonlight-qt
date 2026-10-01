@@ -17,6 +17,11 @@ linux:contains(QT_ARCH, x86_64) {
     roundtrip.file = $$PWD/roundtrip.pro
     SUBDIRS += roundtrip
 }
+macx {
+    # MoltenVK from the prebuilt dependencies
+    roundtrip.file = $$PWD/roundtrip.pro
+    SUBDIRS += roundtrip
+}
 
 rtpqueue.file = $$PWD/rtpqueue.pro
 SUBDIRS += rtpqueue

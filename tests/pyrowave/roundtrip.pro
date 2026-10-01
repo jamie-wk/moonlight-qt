@@ -23,3 +23,17 @@ linux {
     HEADERS += $$PWD/../../app/streaming/video/pyrowave/pyrowavedecoder.h \
                $$PWD/../../app/streaming/video/pyrowave/pyrowaveplacebo.h
 }
+macx {
+    # The same prebuilt SDL, FFmpeg, libplacebo and MoltenVK the app bundles
+    INCLUDEPATH += \
+        $$PWD/../../libs/mac/include \
+        $$PWD/../../libs/mac/include/SDL2 \
+        $$PWD/../../moonlight-common-c/moonlight-common-c/src
+    LIBS += -L$$PWD/../../libs/mac/lib -lSDL2 -lavutil.60 -lavcodec.62 -lplacebo \
+            -Wl,-rpath,$$PWD/../../libs/mac/lib
+    SOURCES += $$PWD/../../app/streaming/video/pyrowave/pyrowavedecoder.cpp \
+               $$PWD/../../app/streaming/video/pyrowave/pyrowaveplacebo.cpp \
+               $$PWD/../../app/streaming/video/ffmpeg-renderers/plvk_c.c
+    HEADERS += $$PWD/../../app/streaming/video/pyrowave/pyrowavedecoder.h \
+               $$PWD/../../app/streaming/video/pyrowave/pyrowaveplacebo.h
+}

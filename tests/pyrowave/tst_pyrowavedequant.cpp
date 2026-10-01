@@ -6,6 +6,7 @@
 #include "pyrowave_common.hpp"
 #include <cstdio>
 #include <cstring>
+#include <utility>
 #include <vector>
 
 bool checkPyroWaveDequantStores()
@@ -80,9 +81,17 @@ bool checkPyroWaveDequantStores()
         if (!output || !readback)
             return false;
 
-        for (unsigned subgroupLog2 = 2; subgroupLog2 <= 7; ++subgroupLog2) {
-            if (!device.supports_subgroup_size_log2(true, subgroupLog2, subgroupLog2))
-                continue;
+        // Every exact subgroup size the device can pin. MoltenVK can pin none,
+        // so there the decoder dispatches with the full 4..128 range and a
+        // varying size; test that configuration instead.
+        std::vector<std::pair<unsigned, unsigned>> subgroupRanges;
+        for (unsigned log2 = 2; log2 <= 7; ++log2) {
+            if (device.supports_subgroup_size_log2(true, log2, log2))
+                subgroupRanges.emplace_back(log2, log2);
+        }
+        if (subgroupRanges.empty() && device.supports_subgroup_size_log2(true, 2, 7))
+            subgroupRanges.emplace_back(2, 7);
+        for (const auto& subgroupRange : subgroupRanges) {
             for (unsigned storageMode = 0; storageMode < 2; ++storageMode) {
                 std::vector<uint8_t> reference;
                 for (bool coalesced : {false, true}) {
@@ -100,7 +109,7 @@ bool checkPyroWaveDequantStores()
                     cmd->set_specialization_constant_mask(1);
                     cmd->set_specialization_constant(0, coalesced);
                     cmd->enable_subgroup_size_control(true);
-                    cmd->set_subgroup_size_log2(true, subgroupLog2, subgroupLog2);
+                    cmd->set_subgroup_size_log2(true, subgroupRange.first, subgroupRange.second);
                     const int32_t push[] = {int32_t(width), int32_t(height), 0, 0, 2};
                     cmd->push_constants(push, 0, sizeof(push));
                     cmd->set_storage_texture(0, 0, *output);
@@ -141,8 +150,8 @@ bool checkPyroWaveDequantStores()
                     if (!coalesced)
                         reference = result;
                     else if (result != reference) {
-                        std::fprintf(stderr, "FAIL: coefficient stores differ (format %u, subgroup %u, storage %u)\n",
-                                     unsigned(format), 1u << subgroupLog2, storageMode);
+                        std::fprintf(stderr, "FAIL: coefficient stores differ (format %u, subgroup max %u, storage %u)\n",
+                                     unsigned(format), 1u << subgroupRange.second, storageMode);
                         return false;
                     }
                     // The omitted tile in the top right must overwrite poison with zero.

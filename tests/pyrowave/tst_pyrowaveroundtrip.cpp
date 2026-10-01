@@ -8,11 +8,14 @@
 #include <vulkan/vulkan.h>
 #include <pyrowave.h>
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include "../../app/streaming/video/pyrowave/pyrowavedecoder.h"
 #include "../../app/streaming/video/pyrowave/pyrowaveplacebo.h"
 #include <chrono>
 #include <memory>
+#endif
+#ifdef __APPLE__
+#include <dlfcn.h>
 #endif
 
 #include <algorithm>
@@ -26,7 +29,7 @@
 namespace {
 
 int g_Failures = 0;
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 struct SharedRenderer;
 SharedRenderer* g_Shared = nullptr;
 #endif
@@ -109,7 +112,7 @@ double psnr(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b)
     return mse == 0 ? 99.0 : 10.0 * std::log10(255.0 * 255.0 / mse);
 }
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 // A headless libplacebo device standing in for the Vulkan renderer
 struct SharedRenderer {
     pl_log log = nullptr;
@@ -122,6 +125,15 @@ struct SharedRenderer {
     {
         log = pl_log_create(PL_API_VER, nullptr);
         pl_vk_inst_params instanceParams = pl_vk_inst_default_params;
+#ifdef __APPLE__
+        // The prebuilt libplacebo does not link a Vulkan loader. Use the
+        // bundled MoltenVK, as the app does through SDL.
+        void* moltenVk = dlopen("@rpath/libMoltenVK.dylib", RTLD_NOW | RTLD_LOCAL);
+        if (!moltenVk) return false;
+        instanceParams.get_proc_addr =
+            reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(moltenVk, "vkGetInstanceProcAddr"));
+        if (!instanceParams.get_proc_addr) return false;
+#endif
         instance = pl_vk_inst_create(log, &instanceParams);
         if (!instance) return false;
         pl_vulkan_params params = pl_vulkan_default_params;
@@ -576,7 +588,13 @@ void runCase(pyrowave_device device, int width, int height, bool chroma444, size
     encoderInfo.chroma = chroma444 ? PYROWAVE_CHROMA_SUBSAMPLING_444 : PYROWAVE_CHROMA_SUBSAMPLING_420;
     pyrowave_encoder encoder = nullptr;
     if (pyrowave_encoder_create(&encoderInfo, &encoder) != PYROWAVE_SUCCESS) {
+#ifdef __APPLE__
+        // The encoder needs a fixed 16, 32 or 64 wide subgroup, which MoltenVK
+        // cannot request. Clients only decode; the host encodes.
+        std::printf("%s: SKIP, the PyroWave encoder is unavailable on MoltenVK\n", name.c_str());
+#else
         expect(false, name + ": encoder creation");
+#endif
         return;
     }
 
@@ -628,7 +646,7 @@ void runCase(pyrowave_device device, int width, int height, bool chroma444, size
         size_t criticalBytes = 0;
         const auto records = recordFrame(bitstream, packets, shard,
                                          PyroWaveFraming::coarseBlockCount(geometry), criticalBytes);
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
         if (frameIndex == 0) {
             for (bool tenBit : { false, true }) {
                 checkLinuxClientDecode(records, source, name, tenBit, nullptr);
@@ -716,7 +734,7 @@ int main(int argc, char** argv)
         return passed ? 0 : 1;
     }
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
     checkSharedDecodeCompletion();
     SharedRenderer shared;
     if (shared.create()) {
