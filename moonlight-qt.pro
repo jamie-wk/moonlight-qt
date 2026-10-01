@@ -17,12 +17,17 @@ win32:!winrt {
 }
 
 # PyroWave codec library (see pyrowave/VENDOR.txt). Must match the condition
-# in app/app.pro. Linux decodes with Vulkan and presents through libplacebo.
+# in app/app.pro. Linux and macOS decode with Vulkan and present through
+# libplacebo (MoltenVK on macOS).
 win32:!winrt:contains(QT_ARCH, x86_64):!disable-pyrowave {
     SUBDIRS += pyrowave
     app.depends += pyrowave
 }
 linux:contains(QT_ARCH, x86_64):!disable-pyrowave:!disable-libplacebo:packagesExist(libplacebo) {
+    SUBDIRS += pyrowave
+    app.depends += pyrowave
+}
+macx:!disable-pyrowave:!disable-libplacebo:!disable-prebuilts {
     SUBDIRS += pyrowave
     app.depends += pyrowave
 }

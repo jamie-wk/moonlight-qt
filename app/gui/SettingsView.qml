@@ -896,7 +896,9 @@ Flickable {
                 Column {
                     width: parent.width
                     spacing: 5
-                    visible: SystemProperties.hasPyroWave && slider.pyroWave
+                    // Calibration encodes locally, and PyroWave's encoder needs
+                    // a fixed subgroup size that MoltenVK cannot request
+                    visible: SystemProperties.hasPyroWave && slider.pyroWave && !SystemProperties.isDarwin
 
                     ComboBox {
                         id: calibrationHost

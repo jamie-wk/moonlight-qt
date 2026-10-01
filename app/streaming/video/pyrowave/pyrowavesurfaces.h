@@ -79,10 +79,10 @@ struct PyroWaveFrameRef {
     }
 };
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include <vulkan/vulkan.h>
 
-// Linux contract: the renderer shares its own VkDevice with the decoder and
+// Linux and macOS (MoltenVK) contract: the renderer shares its own VkDevice with the decoder and
 // lends it plane images it owns. Timeline semaphores order the renderer's
 // transition into VK_IMAGE_LAYOUT_GENERAL, the decode, and the renderer's
 // later reads, so neither side waits on the CPU.

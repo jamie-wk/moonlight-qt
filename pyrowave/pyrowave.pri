@@ -41,6 +41,12 @@ linux:contains(QT_ARCH, x86_64) {
     # supports it; without this flag the vendored source hits "Implement me".
     QMAKE_CXXFLAGS += -msse4.1
 }
+macx {
+    # Universal builds compile each file for every slice. Apple Silicon uses
+    # Granite's NEON path; the Intel slice needs SSE4.1 like Linux above
+    # (every Mac that runs macOS 13 supports it).
+    QMAKE_CXXFLAGS += -Xarch_x86_64 -msse4.1
+}
 
 SOURCES += \
     $$PW_DIR/pyrowave_c.cpp \

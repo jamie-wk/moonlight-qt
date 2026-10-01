@@ -2248,7 +2248,7 @@ bool FFmpegVideoDecoder::initializePyroWave(PDECODER_PARAMETERS params)
 
 #ifdef Q_OS_WIN32
     m_BackendRenderer = new D3D11VARenderer(0);
-#elif defined(Q_OS_LINUX) && defined(HAVE_LIBPLACEBO_VULKAN)
+#elif (defined(Q_OS_LINUX) || defined(Q_OS_DARWIN)) && defined(HAVE_LIBPLACEBO_VULKAN)
     m_BackendRenderer = new PlVkRenderer();
 #else
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
